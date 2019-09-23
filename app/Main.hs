@@ -49,9 +49,6 @@ nestedExample s = do
       maxBShares sh = sPopCount $ countIndex False (s * s) (s * s) sh
       maxAShares sh = sPopCount $ countIndex True (s * s) (s * s) sh
   --
-  -- Create the transpose
-  --
-  --
   -- Constrain length of list
   constrain $ L.length a .== (fromIntegral $ s * s)
   --
@@ -79,6 +76,6 @@ asMatrix shares list = M.fromList shares shares list
 
 main :: IO ()
 main = do
-  let shares = 6 :: Int
+  let shares = 3 :: Int
   s <- runSMT $ nestedExample (fromIntegral shares)
   print $ asMatrix shares s
