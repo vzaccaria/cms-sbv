@@ -2,6 +2,8 @@
 
 module Main where
 
+import ProbeGroups
+
 import Data.List
 import qualified Data.Matrix as M
 import Data.SBV
@@ -60,20 +62,10 @@ nestedExample s = do
   let countS i = constrain $ (count (s * s) a i) .== (fromIntegral s)
   mapM_ (countS) [0 .. s - 1]
   --
-  -- Shares must appear in each row and column at max s-1 times
-  -- mapM_ (ensureShareLessThan s a) [0 .. s - 1]
-  -- Do the query
-  let constSh v x = do
+  let constSh (x, v) = do
         constrain $ maxBShares x .< (fromIntegral v)
         constrain $ maxAShares x .< (fromIntegral v)
-  constSh 4 [0]
-  constSh 4 [1]
-  constSh 4 [2]
-  constSh 4 [3]
-  -- constSh 5 [1, 0]
-  -- constSh 5 [3, 0]
-  -- constSh 5 [2, 1]
-  -- constSh 5 [3, 2]
+  mapM_ constSh (getBoundProbes (fromIntegral s))
   query $ do
     cs <- checkSat
     case cs of
@@ -87,6 +79,6 @@ asMatrix shares list = M.fromList shares shares list
 
 main :: IO ()
 main = do
-  let shares = 4 :: Int
+  let shares = 6 :: Int
   s <- runSMT $ nestedExample (fromIntegral shares)
   print $ asMatrix shares s

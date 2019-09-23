@@ -2,17 +2,17 @@
 
 module ProbeGroups where
 
-import           Data.List
+import Data.List
 
-countPartitions :: (Ord a, Num a) => a -> [a] -> Int
+countPartitions :: Integer -> [Integer] -> Integer
 countPartitions nshares list =
   let la = sort list
       lb = tail la ++ [(head la + nshares)]
-  in length $ filter (> 1) $ zipWith (-) lb la
+  in fromIntegral $ length $ filter (> 1) $ zipWith (-) lb la
 
-getBoundD :: (Ord a, Num a) => a -> [a] -> Int
+getBoundD :: Integer -> [Integer] -> Integer
 getBoundD nshares list =
-  let pi = length list
+  let pi = fromIntegral $ length list
       t = countPartitions nshares list
   in pi + 1 + 2 * t
 
