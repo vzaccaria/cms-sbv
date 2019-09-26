@@ -2,15 +2,15 @@
 
 module Main where
 
-import ProbeGroups
+import           ProbeGroups
 
-import Data.List
-import qualified Data.Matrix as M
-import Data.SBV
-import Data.SBV.Control
+import           Data.List
+import qualified Data.Matrix      as M
+import           Data.SBV
+import           Data.SBV.Control
 
-import Data.SBV.List ((.!!))
-import qualified Data.SBV.List as L
+import           Data.SBV.List    ((.!!))
+import qualified Data.SBV.List    as L
 
 count :: Integer -> SList Integer -> Integer -> SBV Integer
 count 0 list val = literal 0
@@ -19,8 +19,13 @@ count pos list val =
       x = (ite (literal val .== cur) (literal 1) (literal 0))
   in x + (count (pos - 1) rest val)
 
-nestedExample :: Integer -> Symbolic [Integer]
-nestedExample s = do
+data ProblemType
+  = ForcePS
+  | ForceSNI
+  | ForceNI
+
+allocateShares :: ProblemType -> Integer -> Symbolic [Integer]
+allocateShares ty s = do
   a :: SList Integer <- sList "a"
   let lessThanS i =
         constrain $ (a .!! i .>= 0) .&& (a .!! i) .< (fromIntegral s)
@@ -59,10 +64,35 @@ nestedExample s = do
   let countS i = constrain $ (count (s * s) a i) .== (fromIntegral s)
   mapM_ (countS) [0 .. s - 1]
   --
-  let constSh (x, v) = do
-        constrain $ maxBShares x .< (fromIntegral v)
-        constrain $ maxAShares x .< (fromIntegral v)
-  mapM_ constSh (getBoundProbes (fromIntegral s))
+  let constPS (x, (d, _)) = do
+        constrain $ maxBShares x .< (fromIntegral d)
+        constrain $ maxAShares x .< (fromIntegral d)
+  let constSNI (x, (_, t)) = do
+        let pi = length x
+        let ss = fromIntegral s
+        let tt = fromIntegral t
+        constrain $
+          (literal $ pi + 2 * t <= (ss - 1)) .=> maxBShares x .<=
+          (literal $ 2 * tt)
+        constrain $
+          (literal $ pi + 2 * t <= (ss - 1)) .=> maxAShares x .<=
+          (literal $ 2 * tt)
+  let constNI (x, (_, t)) = do
+        let pi = length x
+        let ss = fromIntegral s
+        let tt = fromIntegral t
+        constrain $
+          (literal $ pi + 2 * t <= (ss - 1)) .=> maxBShares x .<=
+          (literal $ 2 * tt) +
+          (literal $ fromIntegral pi)
+        constrain $
+          (literal $ pi + 2 * t <= (ss - 1)) .=> maxAShares x .<=
+          (literal $ 2 * tt) +
+          (literal $ fromIntegral pi)
+  case ty of
+    ForcePS  -> mapM_ constPS (getBoundProbes (fromIntegral s))
+    ForceSNI -> mapM_ constSNI (getBoundProbesAll (fromIntegral s))
+    ForceNI  -> mapM_ constNI (getBoundProbesAll (fromIntegral s))
   query $ do
     cs <- checkSat
     case cs of
@@ -76,6 +106,6 @@ asMatrix shares list = M.fromList shares shares list
 
 main :: IO ()
 main = do
-  let shares = 3 :: Int
-  s <- runSMT $ nestedExample (fromIntegral shares)
-  print $ asMatrix shares s
+  let shares = 5 :: Integer
+  s <- runSMT $ allocateShares ForceNI shares
+  print $ asMatrix (fromIntegral shares) s
