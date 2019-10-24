@@ -2,7 +2,7 @@
 
 module ProbeGroups where
 
-import           Data.List
+import Data.List
 
 countPartitions :: Integer -> [Integer] -> Int
 countPartitions nshares list =
